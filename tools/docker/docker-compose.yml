@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: myapp
+    restart: unless-stopped
+    expose:
+      - "3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - app_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    networks:
+      - web
+      - backend
+
+  db:
+    image: postgres:16-alpine
+    container_name: myapp_db
+    restart: unless-stopped
+    expose:
+      - "5432"
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+volumes:
+  postgres_data:
+  app_logs:
+
+networks:
+  web:
+    name: web_network
+  backend:
+    name: backend_network
+    internal: true
